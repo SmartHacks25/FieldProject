@@ -1,10 +1,127 @@
-# Import necessary libraries
 from datetime import datetime, date
 import pandas as pd
 from xbbg import blp
 import requests
 import csv
 import streamlit as st
+import matplotlib.pyplot as plt
+from bokeh.models import HoverTool
+from bokeh.models import ColumnDataSource
+from bokeh.plotting import figure
+
+# Function to visualize data from CSV
+def visualize_data(path_to_price_data):
+    # Read the CSV file
+    df = pd.read_csv(path_to_price_data)
+
+    # Convert the index to datetime
+    df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
+
+    # Set the index to the datetime column
+    df.set_index(df.columns[0], inplace=True)
+
+    # Set the page title
+    st.title('CSV Data Visualization')
+
+    # Display the DataFrame
+    st.write(df)
+
+    # Get the list of equities
+    equities = [col for col in df.columns if df[col].dtype == 'float64']
+
+    # Allow the user to select which equity plot to display
+    selected_equity = st.selectbox('Select Equity', equities)
+
+    # Allow the user to select the time frame
+    time_frame = st.selectbox('Select Time Frame', ['Last 5 Days', '1 Month', '6 Months', '1 Year', '5 Years'])
+
+    # Resample the data based on the selected time frame
+    if time_frame == 'Last 5 Days':
+        df_resampled = df[selected_equity].last('5D')
+    elif time_frame == '1 Month':
+        df_resampled = df[selected_equity].last('1M')
+    elif time_frame == '6 Months':
+        df_resampled = df[selected_equity].last('6M')
+    elif time_frame == '1 Year':
+        df_resampled = df[selected_equity].last('1Y')
+    elif time_frame == '5 Years':
+        df_resampled = df[selected_equity].last('5Y')
+
+    # Line plot for the selected equity and time frame
+    st.subheader(f'Line plot for {selected_equity} ({time_frame})')
+    p = figure(plot_width=800, plot_height=400, x_axis_type="datetime", background_fill_color="black",
+               border_fill_color="black", border_fill_alpha=0)
+    p.line(df_resampled.index, df_resampled.values, line_width=2, color='green')
+    p.xaxis.axis_label = 'Date'
+    p.yaxis.axis_label = selected_equity
+    p.axis.axis_label_text_color = "white"
+    p.axis.major_label_text_color = "white"
+    p.ygrid.grid_line_color = "lightgrey"  # Set the color of the horizontal grid lines
+    p.ygrid.grid_line_alpha = 0.25  # Set the transparency of the grid lines
+    p.xgrid.visible = False  # Disable the vertical grid lines
+    hover = HoverTool()
+    hover.tooltips = [("Date", "@x{%F}"), (selected_equity, "@y")]
+    hover.formatters = {"@x": "datetime"}
+    p.add_tools(hover)
+    st.bokeh_chart(p)
+
+    # Create a ColumnDataSource with the data for the bar graph
+    source_bar = ColumnDataSource(data=dict(
+        x=df_resampled.index,
+        top=df_resampled.values.tolist()
+    ))
+
+    # Bar plot for the selected equity and time frame
+    st.subheader(f'Bar plot for {selected_equity} ({time_frame})')
+    p = figure(plot_width=800, plot_height=400, x_axis_type="datetime", background_fill_color="black",
+               border_fill_color="black", border_fill_alpha=0)
+    p.vbar(x='x', top='top', width=0.5, color='green', line_width=10, source=source_bar)
+    p.xaxis.axis_label = 'Date'
+    p.yaxis.axis_label = selected_equity
+    p.axis.axis_label_text_color = "white"
+    p.axis.major_label_text_color = "white"
+    p.ygrid.grid_line_color = "lightgrey"  # Set the color of the horizontal grid lines
+    p.ygrid.grid_line_alpha = 0.25  # Set the transparency of the grid lines
+    p.xgrid.visible = False  # Disable the vertical grid lines
+    hover_bar = HoverTool()
+    hover_bar.tooltips = [("Date", "@x{%F}"), (selected_equity, "@top")]
+    hover_bar.formatters = {"@x": "datetime"}
+    p.add_tools(hover_bar)
+    st.bokeh_chart(p)
+
+    # Line plot for the selected equity and time frame
+    st.subheader(f'Line plot for {selected_equity} ({time_frame})')
+    fig, ax = plt.subplots()
+    ax.plot(df_resampled.index, df_resampled.values, color='green')
+    ax.set_xlabel('Date')
+    ax.set_ylabel(selected_equity)
+    plt.xticks(rotation=45)
+    ax.set_ylabel(selected_equity)
+    ax.set_facecolor('black')
+    ax.figure.set_facecolor('black')
+    ax.tick_params(axis='x', colors='white')
+    ax.tick_params(axis='y', colors='white')
+    ax.yaxis.label.set_color('white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.grid(True, color='lightgrey', linestyle='--', linewidth=0.5)
+    st.pyplot(fig)
+
+    # Bar plot for the selected equity and time frame
+    st.subheader(f'Bar plot for {selected_equity} ({time_frame})')
+    fig, ax = plt.subplots()
+    ax.bar(df_resampled.index, df_resampled.values, color='green', width=15)
+    ax.set_xlabel('Date')
+    ax.set_ylabel(selected_equity)
+    plt.xticks(rotation=45)
+    ax.set_facecolor('black')
+    ax.figure.set_facecolor('black')
+    ax.tick_params(axis='x', colors='white')
+    ax.tick_params(axis='y', colors='white')
+    ax.yaxis.label.set_color('white')
+    ax.xaxis.label.set_color('white')
+    ax.yaxis.grid(True, color='lightgrey', linestyle='--', linewidth=0.5)
+    st.pyplot(fig)
+
 
 # Function to fetch price data from Bloomberg
 def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency):
@@ -72,10 +189,8 @@ def run_fetch_data(path_to_tickers, frequency, start_date):
     empty_data = fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency)
     return empty_data
 
-
-# Function to create input window
-def create_input_window(path_to_tickers):
-
+# Function to add or delete data from CSV
+def add_or_delete_data(path_to_tickers):
     # Check for errors in user inputs
     errors = []
     st.title('Bloomberg Data Fetcher')
@@ -105,14 +220,12 @@ def create_input_window(path_to_tickers):
             errors.append("Empty field")
 
     else:
-        ticker_symbols = st.text_input("Enter ticker symbols (separated by comma if multiple):",key="ticker_input")
+        ticker_symbols = st.text_input("Enter ticker symbols (separated by comma if multiple):", key="ticker_input")
         if len(ticker_symbols) == 0:
             errors.append("Can't leave field empty")
 
-
         # Process user inputs
         ticker_symbols_input_list = [s.strip() for s in ticker_symbols.split(',') if s.strip()]
-
 
         if ticker_symbols_input_list:
             try:
@@ -122,7 +235,7 @@ def create_input_window(path_to_tickers):
                 existing_tickers = []
 
             if any(ticker in existing_tickers for ticker in ticker_symbols_input_list):
-                existing_input_ticker =[]
+                existing_input_ticker = []
                 for ticker in ticker_symbols_input_list:
                     if ticker in existing_tickers:
                         existing_input_ticker.append(ticker)
@@ -148,7 +261,7 @@ def create_input_window(path_to_tickers):
                     currency_input_list.append(currency)
 
                 if len(ticker_symbols_input_list) != len(equities_input_list) or len(ticker_symbols_input_list) != len(
-                            currency_input_list):
+                        currency_input_list):
                     max_length = max(len(ticker_symbols_input_list), len(equities_input_list), len(currency_input_list))
                     if len(ticker_symbols_input_list) != max_length:
                         errors.append("Please provide all the required ticker symbols.")
@@ -170,8 +283,9 @@ def create_input_window(path_to_tickers):
                     if frequency == 'Monthly':
                         frequency = "M"
 
-                    start_date_str = st.date_input("Select start date", value=date.today().replace(day=1), min_value=date(1990, 1, 1),
-                                               max_value=date.today())
+                    start_date_str = st.date_input("Select start date", value=date.today().replace(day=1),
+                                                   min_value=date(1990, 1, 1),
+                                                   max_value=date.today())
                     start_date = start_date_str.strftime('%Y-%m-%d')
                     start_date = datetime.strptime(start_date, '%Y-%m-%d')
 
@@ -184,7 +298,7 @@ def create_input_window(path_to_tickers):
                 for ticker_symbol in ticker_symbols:
                     bloomberg_equities = bloomberg_equities[bloomberg_equities['BBG Ticker'] != ticker_symbol]
                 bloomberg_equities.to_csv(path_to_tickers, index=False)
-                st.write("Selected ticker symbols deleted successfully.")
+                st.write("Selected ticker symbols deleted successfully. Press Submit again if you want to delete more data")
 
 
         else:
@@ -207,21 +321,33 @@ def create_input_window(path_to_tickers):
                 # Append the new data to the CSV file
                 new_data.to_csv(path_to_tickers, mode='a', header=False, index=False)
                 st.success("New Ticker added to CSV file")
-                wait_label.text("Your file is ready to use @ DROPBOX: 22. INVESTMENT TEAM\Database\\bloomberg_price.csv")
+                st.write(
+                    "Your file is ready to use @ DROPBOX: 22. INVESTMENT TEAM\Database\\bloomberg_price.csv\n Press Submit again if you want to delete more data")
 
-    st.markdown(
-        "<p style='text-align: center; color: white;'>Made with ❤️ by Shradha Maria</p>",
-        unsafe_allow_html=True
+
+if __name__ == '__main__':
+
+    option = st.sidebar.radio(
+        "Select an option",
+        ('Visualize Data', 'Add/Delete Tickers')
     )
 
-# Run the Streamlit app
-if __name__ == "__main__":
     today = date.today()
+    # Read the CSV file
+    path_to_price_data = r"/Users/shradhamaria/FieldPROJECT/xbbg/bloomberg_price.csv"
     path_to_tickers = r"/Users/shradhamaria/FieldPROJECT/xbbg/bloomberg_tickers.csv"
     current_time = datetime.now().time()
     # automate the script to run at the first day of month and every monday
     if ((today.day == 1 or today.weekday() == 0) and datetime.strptime('20:30', '%H:%M').time() <= current_time <=
             datetime.strptime('20:35', '%H:%M').time()):
         run_with_defaults(path_to_tickers)
-    else:
-        create_input_window(path_to_tickers)
+
+    elif option == 'Visualize Data':
+        visualize_data(path_to_price_data)
+    elif option == 'Add/Delete Tickers':
+        add_or_delete_data(path_to_tickers)
+
+    st.markdown(
+        "<p style='text-align: center; color: white;'>Made with ❤️ by Shradha Maria</p>",
+        unsafe_allow_html=True
+    )

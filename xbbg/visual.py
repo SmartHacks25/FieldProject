@@ -1,17 +1,8 @@
-import streamlit as st
-import pandas as pd
 import matplotlib.pyplot as plt
-import mplcursors
 import streamlit as st
 import pandas as pd
-from math import pi
-from bokeh.plotting import figure
 from bokeh.models import HoverTool
-from bokeh.palettes import Category20c
 from bokeh.models import ColumnDataSource
-
-from bokeh.io import show, output_file, curdoc
-from bokeh.models import ColumnDataSource, FactorRange
 from bokeh.plotting import figure
 
 import numpy as np
@@ -110,7 +101,6 @@ ax.tick_params(axis='y', colors='white')
 ax.yaxis.label.set_color('white')
 ax.xaxis.label.set_color('white')
 ax.yaxis.grid(True, color='lightgrey', linestyle='--', linewidth=0.5)
-mplcursors.cursor(hover=True)
 st.pyplot(fig)
 
 # Bar plot for the selected equity and time frame
@@ -127,7 +117,6 @@ ax.tick_params(axis='y', colors='white')
 ax.yaxis.label.set_color('white')
 ax.xaxis.label.set_color('white')
 ax.yaxis.grid(True, color='lightgrey', linestyle='--', linewidth=0.5)
-mplcursors.cursor(hover=True)
 st.pyplot(fig)
 
 
