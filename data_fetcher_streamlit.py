@@ -4,7 +4,6 @@ from xbbg import blp
 import requests
 import csv
 import streamlit as st
-import matplotlib.pyplot as plt
 from bokeh.models import HoverTool
 from bokeh.models import ColumnDataSource
 from bokeh.plotting import figure
@@ -14,53 +13,71 @@ def visualize_data(path_to_price_data):
     # Read the CSV file
     df = pd.read_csv(path_to_price_data)
 
-    # Convert the index to datetime
-    df[df.columns[0]] = pd.to_datetime(df[df.columns[0]])
+    # Set the page title
+    st.title('CSV Data Visualization')
+    # Display the DataFrame
+    st.write(df)
+
+    # Assuming the date column is at index 0
+    date_column_index = 0
+    df[df.columns[date_column_index]] = pd.to_datetime(df[df.columns[date_column_index]], errors='coerce')
 
     # Set the index to the datetime column
     df.set_index(df.columns[0], inplace=True)
 
-    # Set the page title
-    st.title('CSV Data Visualization')
 
-    # Display the DataFrame
-    st.write(df)
-
-    # Get the list of equities
-    equities = [col for col in df.columns if df[col].dtype == 'float64']
+    # Extract headers
+    headers = df.columns.tolist()
 
     # Allow the user to select which equity plot to display
-    selected_equity = st.selectbox('Select Equity', equities)
+    selected_ticker = st.selectbox('Select Ticker', headers, index=0)
+    column_no = df.columns.get_loc((selected_ticker))
+
+
+    # Automatically populate equities and currency fields based on the selected ticker symbol
+    selected_equities = df.iloc[0, column_no]
+    selected_currency = df.iloc[1, column_no]
+
+    st.text_input("Equities", value=selected_equities, key='equities', disabled=True)
+    st.text_input("Currency", value=selected_currency, key='currency', disabled=True)
 
     # Allow the user to select the time frame
     time_frame = st.selectbox('Select Time Frame', ['Last 5 Days', '1 Month', '6 Months', '1 Year', '5 Years'])
 
     # Resample the data based on the selected time frame
     if time_frame == 'Last 5 Days':
-        df_resampled = df[selected_equity].last('5D')
+        df_resampled = df[selected_ticker][2:].astype("float64").last('5D')
     elif time_frame == '1 Month':
-        df_resampled = df[selected_equity].last('1M')
+        df_resampled = df[selected_ticker][2:].astype("float64").last('1M')
     elif time_frame == '6 Months':
-        df_resampled = df[selected_equity].last('6M')
+        df_resampled = df[selected_ticker][2:].astype("float64").last('6M')
     elif time_frame == '1 Year':
-        df_resampled = df[selected_equity].last('1Y')
+        df_resampled = df[selected_ticker][2:].astype("float64").last('1Y')
     elif time_frame == '5 Years':
-        df_resampled = df[selected_equity].last('5Y')
+        df_resampled = df[selected_ticker][2:].astype("float64").last('5Y')
+
 
     # Line plot for the selected equity and time frame
-    st.subheader(f'Line plot for {selected_equity} ({time_frame})')
+    st.subheader(f'Line plot for {selected_ticker} ({time_frame})')
     p = figure(plot_width=800, plot_height=400, x_axis_type="datetime", background_fill_color="black",
                border_fill_color="black", border_fill_alpha=0)
     p.line(df_resampled.index, df_resampled.values, line_width=2, color='green')
+    p.circle(df_resampled.index, df_resampled.values, size=8, color='green')
     p.xaxis.axis_label = 'Date'
-    p.yaxis.axis_label = selected_equity
+    p.yaxis.axis_label = selected_ticker
     p.axis.axis_label_text_color = "white"
     p.axis.major_label_text_color = "white"
-    p.ygrid.grid_line_color = "lightgrey"  # Set the color of the horizontal grid lines
-    p.ygrid.grid_line_alpha = 0.25  # Set the transparency of the grid lines
-    p.xgrid.visible = False  # Disable the vertical grid lines
+    p.axis.axis_label_text_font_style = "normal"
+    p.axis.axis_label_text_font_size = "14pt"
+    p.axis.axis_label_text_font = "Arial"
+    p.axis.major_label_text_font_style = "normal"
+    p.axis.major_label_text_font_size = "12pt"
+    p.axis.major_label_text_font = "Arial"
+    p.ygrid.grid_line_color = "lightgrey"
+    p.ygrid.grid_line_alpha = 0.25
+    p.xgrid.visible = False
     hover = HoverTool()
-    hover.tooltips = [("Date", "@x{%F}"), (selected_equity, "@y")]
+    hover.tooltips = [("Date", "@x{%F}"), (selected_ticker, "@y")]
     hover.formatters = {"@x": "datetime"}
     p.add_tools(hover)
     st.bokeh_chart(p)
@@ -72,59 +89,32 @@ def visualize_data(path_to_price_data):
     ))
 
     # Bar plot for the selected equity and time frame
-    st.subheader(f'Bar plot for {selected_equity} ({time_frame})')
+    st.subheader(f'Bar plot for {selected_ticker} ({time_frame})')
     p = figure(plot_width=800, plot_height=400, x_axis_type="datetime", background_fill_color="black",
                border_fill_color="black", border_fill_alpha=0)
     p.vbar(x='x', top='top', width=0.5, color='green', line_width=10, source=source_bar)
     p.xaxis.axis_label = 'Date'
-    p.yaxis.axis_label = selected_equity
+    p.yaxis.axis_label = selected_ticker
     p.axis.axis_label_text_color = "white"
     p.axis.major_label_text_color = "white"
-    p.ygrid.grid_line_color = "lightgrey"  # Set the color of the horizontal grid lines
-    p.ygrid.grid_line_alpha = 0.25  # Set the transparency of the grid lines
-    p.xgrid.visible = False  # Disable the vertical grid lines
+    p.axis.axis_label_text_font_style = "normal"
+    p.axis.axis_label_text_font_size = "14pt"
+    p.axis.axis_label_text_font = "Arial"
+    p.axis.major_label_text_font_style = "normal"
+    p.axis.major_label_text_font_size = "12pt"
+    p.axis.major_label_text_font = "Arial"
+    p.ygrid.grid_line_color = "lightgrey"
+    p.ygrid.grid_line_alpha = 0.25
+    p.xgrid.visible = False
     hover_bar = HoverTool()
-    hover_bar.tooltips = [("Date", "@x{%F}"), (selected_equity, "@top")]
+    hover_bar.tooltips = [("Date", "@x{%F}"), (selected_ticker, "@top")]
     hover_bar.formatters = {"@x": "datetime"}
     p.add_tools(hover_bar)
     st.bokeh_chart(p)
 
-    # Line plot for the selected equity and time frame
-    st.subheader(f'Line plot for {selected_equity} ({time_frame})')
-    fig, ax = plt.subplots()
-    ax.plot(df_resampled.index, df_resampled.values, color='green')
-    ax.set_xlabel('Date')
-    ax.set_ylabel(selected_equity)
-    plt.xticks(rotation=45)
-    ax.set_ylabel(selected_equity)
-    ax.set_facecolor('black')
-    ax.figure.set_facecolor('black')
-    ax.tick_params(axis='x', colors='white')
-    ax.tick_params(axis='y', colors='white')
-    ax.yaxis.label.set_color('white')
-    ax.xaxis.label.set_color('white')
-    ax.yaxis.grid(True, color='lightgrey', linestyle='--', linewidth=0.5)
-    st.pyplot(fig)
-
-    # Bar plot for the selected equity and time frame
-    st.subheader(f'Bar plot for {selected_equity} ({time_frame})')
-    fig, ax = plt.subplots()
-    ax.bar(df_resampled.index, df_resampled.values, color='green', width=15)
-    ax.set_xlabel('Date')
-    ax.set_ylabel(selected_equity)
-    plt.xticks(rotation=45)
-    ax.set_facecolor('black')
-    ax.figure.set_facecolor('black')
-    ax.tick_params(axis='x', colors='white')
-    ax.tick_params(axis='y', colors='white')
-    ax.yaxis.label.set_color('white')
-    ax.xaxis.label.set_color('white')
-    ax.yaxis.grid(True, color='lightgrey', linestyle='--', linewidth=0.5)
-    st.pyplot(fig)
-
 
 # Function to fetch price data from Bloomberg
-def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency):
+def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, path_to_csv):
     # Fetch price data from Bloomberg
     price_data = blp.bdh(
         tickers=ticker_symbols, flds=['last_price'], start_date=start_date, end_date=end_date, Per=frequency
@@ -138,7 +128,6 @@ def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, e
     header = [ticker_symbols, equities, currency]
     price_data.columns = header
 
-    path_to_csv = r"/Users/shradhamaria/FieldPROJECT/xbbg"
     # Save the data to a CSV file
     file_name = "\\" + frequency + '_bloomberg_price.csv'
     file_path = path_to_csv + file_name
@@ -158,8 +147,7 @@ def check_if_ticker_exists(ticker_symbols):
         return False
 
 # Function to log successful runs
-def log_successful_run():
-    log_file_path = r'C:\Users\BrightsideCapital\New folder\Brightside Capital Dropbox\Brightside Capital (office)\22. INVESTMENT TEAM\Database\logfile.csv'
+def log_successful_run(log_file_path):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(log_file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
@@ -167,14 +155,14 @@ def log_successful_run():
 
 
 # Function to run with default parameters
-def run_with_defaults(path_to_tickers):
+def run_with_defaults(path_to_tickers, log_file_path, path_to_csv):
     frequency = 'M'
     start_date = date.today().replace(day=1)
-    run_fetch_data(path_to_tickers, frequency, start_date)
-    log_successful_run()
+    run_fetch_data(path_to_tickers, frequency, start_date, path_to_csv)
+    log_successful_run(log_file_path)
 
 # Function to fetch data
-def run_fetch_data(path_to_tickers, frequency, start_date):
+def run_fetch_data(path_to_tickers, frequency, start_date, path_to_csv):
     bloomberg_equities = pd.read_csv(path_to_tickers, index_col=False)
     bloomberg_equities = bloomberg_equities.sort_values(by=['BBG Ticker'], ignore_index=True)
 
@@ -186,11 +174,11 @@ def run_fetch_data(path_to_tickers, frequency, start_date):
     # Determine today's date
     end_date = datetime.today()
 
-    empty_data = fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency)
+    empty_data = fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, path_to_csv)
     return empty_data
 
 # Function to add or delete data from CSV
-def add_or_delete_data(path_to_tickers):
+def add_or_delete_data(path_to_tickers, path_to_csv):
     # Check for errors in user inputs
     errors = []
     st.title('Bloomberg Data Fetcher')
@@ -241,15 +229,13 @@ def add_or_delete_data(path_to_tickers):
                         existing_input_ticker.append(ticker)
                 st.error(f"Ticker symbol already exists.\n   {', '.join(existing_input_ticker)}")
                 errors.append("Ticker symbol already exists.")
-                """
+
             elif any(not check_if_ticker_exists(ticker) for ticker in ticker_symbols_input_list):
                 non_existing_tickers = [ticker for ticker in ticker_symbols_input_list if
                                     not check_if_ticker_exists(ticker)]
-                st.error(
-                    f"The following ticker symbols do not exist on Bloomberg: {', '.join(non_existing_tickers)}")
-                errors.append(
-                    f"The following ticker symbols do not exist on Bloomberg: {', '.join(non_existing_tickers)}")
-            """
+                st.error(f"The following ticker symbols do not exist on Bloomberg: {', '.join(non_existing_tickers)}")
+                errors.append(f"The following ticker symbols do not exist on Bloomberg: {', '.join(non_existing_tickers)}")
+
             else:
                 equities = st.text_input("Enter equities (separated by comma if multiple):")
                 equities_input_list = [s.strip() for s in equities.split(',') if s.strip()]
@@ -309,7 +295,7 @@ def add_or_delete_data(path_to_tickers):
             })
 
             wait_label.text("Please wait while we fetch the requested data...")
-            empty_data_error = run_fetch_data(path_to_tickers, frequency, start_date)
+            empty_data_error = run_fetch_data(path_to_tickers, frequency, start_date, path_to_csv)
 
             if empty_data_error == False:
                 wait_label.text("Error......")
@@ -321,8 +307,7 @@ def add_or_delete_data(path_to_tickers):
                 # Append the new data to the CSV file
                 new_data.to_csv(path_to_tickers, mode='a', header=False, index=False)
                 st.success("New Ticker added to CSV file")
-                st.write(
-                    "Your file is ready to use @ DROPBOX: 22. INVESTMENT TEAM\Database\\bloomberg_price.csv\n Press Submit again if you want to delete more data")
+                st.write("Your file is ready to use")
 
 
 if __name__ == '__main__':
@@ -334,20 +319,27 @@ if __name__ == '__main__':
 
     today = date.today()
     # Read the CSV file
-    path_to_price_data = r"/Users/shradhamaria/FieldPROJECT/xbbg/bloomberg_price.csv"
-    path_to_tickers = r"/Users/shradhamaria/FieldPROJECT/xbbg/bloomberg_tickers.csv"
+    #input for price data path
+    path_to_price_data = input("Enter the path to the price data CSV file: ")
+    #input for tickers path
+    path_to_tickers = input("Enter the path to the tickers CSV file: ")
+    #input for log file path
+    log_file_path = input("Enter the path to the log file: ")
+    #input for CSV path
+    path_to_csv = input("Enter the path to the CSV folder: ")
+
     current_time = datetime.now().time()
     # automate the script to run at the first day of month and every monday
     if ((today.day == 1 or today.weekday() == 0) and datetime.strptime('20:30', '%H:%M').time() <= current_time <=
             datetime.strptime('20:35', '%H:%M').time()):
-        run_with_defaults(path_to_tickers)
+        run_with_defaults(path_to_tickers, log_file_path, path_to_csv)
 
     elif option == 'Visualize Data':
         visualize_data(path_to_price_data)
     elif option == 'Add/Delete Tickers':
-        add_or_delete_data(path_to_tickers)
+        add_or_delete_data(path_to_tickers, path_to_csv)
 
     st.markdown(
-        "<p style='text-align: center; color: white;'>Made with ❤️ by Shradha Maria</p>",
+        "<br><br><br><br><br><br><br><br><br><br><br><br><br><br><p style='text-align: center; color: white;'>Made with ❤️ by Shradha Maria</p>",
         unsafe_allow_html=True
     )

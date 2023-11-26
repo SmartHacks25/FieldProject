@@ -10,8 +10,7 @@ import csv
 
 
 # Function to fetch price data from Bloomberg
-def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, new_data, wait_label):
-
+def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, new_data, wait_label, path_to_csv):
 
     # Fetch price data from Bloomberg
     price_data = blp.bdh(
@@ -26,14 +25,12 @@ def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, e
     header = [ticker_symbols, equities, currency]
     price_data.columns = header
 
-    path_to_csv = r'C:\Users\BrightsideCapital\New folder\Brightside Capital Dropbox\Brightside Capital (office)\22. INVESTMENT TEAM\Database'
     # Save the data to a CSV file
     file_name = "\\" + frequency + '_bloomberg_price.csv'
     file_path = path_to_csv + file_name
-    print(file_path)
     price_data.to_csv(file_path)
     if wait_label != 0:
-        wait_label.config(text="Your file is ready to use @ DROPBOX: 22. INVESTMENT TEAM\Database\\bloomberg_price.csv")
+        wait_label.config(text="Your file is ready to use")
 
 
 # Function to check if ticker exists on Bloomberg
@@ -55,8 +52,7 @@ def on_timeout(window):
     sys.exit("Program closed due to inactivity.")
 
 # Function to log successful runs
-def log_successful_run():
-    log_file_path = r'C:\Users\BrightsideCapital\New folder\Brightside Capital Dropbox\Brightside Capital (office)\22. INVESTMENT TEAM\Database\logfile.csv'
+def log_successful_run(log_file_path):
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(log_file_path, mode='a', newline='') as file:
         writer = csv.writer(file)
@@ -64,18 +60,16 @@ def log_successful_run():
 
     
 # Function to run with default parameters
-def run_with_defaults(wait_label):
+def run_with_defaults(wait_label, path_to_csv, log_file_path, path_to_tickers):
     frequency = 'M'
     start_date = date.today().replace(day=1)
     new_data = pd.DataFrame()
-    run_fetch_data(frequency, start_date, new_data, wait_label)
-    log_successful_run()
+    run_fetch_data(frequency, start_date, new_data, wait_label, path_to_csv, path_to_tickers)
+    log_successful_run(log_file_path)
 
 
 # Function to fetch data
-def run_fetch_data(frequency, start_date, new_data, wait_label):
-    # Read ticker symbols, equities, and currency from the CSV file
-    path_to_tickers = r"C:\Users\BrightsideCapital\PycharmProjects\FieldPROJECT\xbbg\bloomberg_tickers.csv"
+def run_fetch_data(frequency, start_date, new_data, wait_label, path_to_csv, path_to_tickers):
     bloomberg_equities = pd.read_csv(path_to_tickers, index_col=False)
     # bloomberg_equities = pd.concat(bloomberg_equities, new_data)
 
@@ -90,12 +84,13 @@ def run_fetch_data(frequency, start_date, new_data, wait_label):
     # Determine today's date
     end_date = datetime.today()
 
-    empty_data = fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, new_data, wait_label)
+    empty_data = fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, new_data, wait_label, path_to_csv)
     return empty_data
 
 # Function to create input window
-def create_input_window():
-    def on_submit():
+def create_input_window(path_to_csv, path_to_tickers):
+
+    def on_submit(path_to_tickers):
         # Get input values
         ticker_symbols = ticker_symbols_input.get()
         equities = equities_input.get()
@@ -117,8 +112,6 @@ def create_input_window():
 
             else:
                 try:
-                    path_to_tickers = r"C:\Users\BrightsideCapital\PycharmProjects\FieldPROJECT\xbbg\bloomberg_tickers.csv"
-
                     bloomberg_equities = pd.read_csv(path_to_tickers, index_col=False)
                     existing_tickers = list(bloomberg_equities['BBG Ticker'])
                 except FileNotFoundError:
@@ -162,15 +155,14 @@ def create_input_window():
             else:
                 new_data = pd.DataFrame()
 
-            empty_data_error = run_fetch_data(frequency, start_date, new_data, wait_label)
+            empty_data_error = run_fetch_data(frequency, start_date, new_data, wait_label, path_to_csv, path_to_tickers)
             if empty_data_error == False:
                 errors.append("empty data fetched, please check all the fields")
                 messagebox.showerror("Error", "\n".join(errors))
-                print("gghhhh")
 
             if not errors:
                 #Append the new data to the CSV file
-                new_data.to_csv(r"C:\Users\BrightsideCapital\PycharmProjects\FieldPROJECT\xbbg\bloomberg_tickers.csv", mode='a', header=False, index=False)
+                new_data.to_csv(path_to_tickers, mode='a', header=False, index=False)
                 print("New Ticker added to CSV file")
 
 
@@ -251,8 +243,7 @@ def create_input_window():
     instruction_label = ttk.Label(frame, text=instructions_text, wraplength=800)
     instruction_label.grid(row=8, column=0, columnspan=2, pady=10)
 
-    footer_text = """ By: Shradha Maria and Mariam Lailshvili
-    USI Field Project"""
+    footer_text = """ By: Shradha Maria"""
 
     footer_label = ttk.Label(frame, text=footer_text, wraplength=800)
     footer_label.grid(row=11, column=4, columnspan=2, pady=10)
@@ -268,12 +259,19 @@ if __name__ == "__main__":
 
     no_wait_label = 0
 
+    # input for tickers path
+    path_to_tickers = input("Enter the path to the tickers CSV file: ")
+    # input for log file path
+    log_file_path = input("Enter the path to the log file: ")
+    # input for CSV path
+    path_to_csv = input("Enter the path to the CSV folder: ")
+
     today = date.today()
     current_time = datetime.now().time()
      # automate the script to run at the first day of month and every monday
     if ((today.day == 1 or today.weekday()==0) and datetime.strptime('20:30', '%H:%M').time() <= current_time <=
             datetime.strptime('20:35', '%H:%M').time()) :
-        run_with_defaults(no_wait_label)
+        run_with_defaults(no_wait_label, path_to_csv, log_file_path, path_to_tickers)
 
     else:
-        create_input_window()
+        create_input_window(path_to_csv, path_to_tickers)
