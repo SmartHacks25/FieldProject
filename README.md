@@ -2,7 +2,7 @@
 
 ## Overview
 
-This repository contains Python scripts for visualizing Bloomberg price data and managing ticker symbols in a CSV file. Two versions of the data fetcher are available, each with a different user interface:
+This repository contains Python scripts for visualizing Bloomberg price data and managing ticker symbols in a CSV file. Two versions of the data fetcher are available, each with a different user interface and functionalities:
 
 - `data_fetcher_streamlit.py`: Uses Streamlit for the user interface.
 - `data_fetcher_tkinter.py`: Uses Tkinter for the user interface. This version offers a simplified interface focused on the addition of new ticker symbols without deletion or visualization capabilities.
