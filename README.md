@@ -35,7 +35,7 @@ pip install pandas xbbg requests streamlit bokeh
 1. **Clone the Repository:**
 
     ```bash
-    git clone https://github.com/SmartHacks25/FieldProject.git
+    git clone https://github.com/shradhamaria/FieldProject.git
     ```
 
 2. **Run the Script:**
