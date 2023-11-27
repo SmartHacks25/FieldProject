@@ -113,14 +113,23 @@ def visualize_data(path_to_price_data):
     st.bokeh_chart(p)
 
 
-# Function to fetch price data from Bloomberg
-def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, path_to_csv):
+
+def check_if_empty(ticker_symbols, start_date, frequency):
+    # Determine today's date
+    end_date = datetime.today()
     # Fetch price data from Bloomberg
     price_data = blp.bdh(
         tickers=ticker_symbols, flds=['last_price'], start_date=start_date, end_date=end_date, Per=frequency
     )
     if price_data.empty:
         return False
+
+# Function to fetch price data from Bloomberg
+def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, end_date, frequency, path_to_csv):
+    # Fetch price data from Bloomberg
+    price_data = blp.bdh(
+        tickers=ticker_symbols, flds=['last_price'], start_date=start_date, end_date=end_date, Per=frequency
+    )
     # Delete empty rows
     price_data.dropna(inplace=True, thresh=3, axis=0)
 
@@ -128,8 +137,9 @@ def fetch_price_from_bloomberg(ticker_symbols, equities, currency, start_date, e
     header = [ticker_symbols, equities, currency]
     price_data.columns = header
 
-    # Save the data to a CSV file
-    file_name = "\\" + frequency + '_bloomberg_price.csv'
+    # Add timestamp to the file name
+    timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
+    file_name = "\\" + frequency + '_bloomberg_price_' + timestamp + '.csv'
     file_path = path_to_csv + file_name
     price_data.to_csv(file_path)
 
@@ -294,8 +304,7 @@ def add_or_delete_data(path_to_tickers, path_to_csv):
                 'Currency': currency_input_list
             })
 
-            wait_label.text("Please wait while we fetch the requested data...")
-            empty_data_error = run_fetch_data(path_to_tickers, frequency, start_date, path_to_csv)
+            empty_data_error = check_if_empty(ticker_symbols, start_date, frequency)
 
             if empty_data_error == False:
                 wait_label.text("Error......")
@@ -307,6 +316,8 @@ def add_or_delete_data(path_to_tickers, path_to_csv):
                 # Append the new data to the CSV file
                 new_data.to_csv(path_to_tickers, mode='a', header=False, index=False)
                 st.success("New Ticker added to CSV file")
+                wait_label.text("Please wait while we fetch the requested data...")
+                run_fetch_data(path_to_tickers, frequency, start_date, path_to_csv)
                 st.write("Your file is ready to use")
 
 
